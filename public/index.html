@@ -23,9 +23,9 @@
 
 <body>
   <div id="app">
-    <!-- Your code here -->
-    {{ test }}
-    <button @click="cli">cli</button>
+    <p>MAIL:<input type="text" v-model="email"></p>
+    <p>PASS:<input type="text" v-model="password"></p>
+    <p><button @click="login">login</button></p>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
   <script src="https://unpkg.com/vue-material@beta"></script>
@@ -44,19 +44,38 @@
     const vm = new Vue({
       el: '#app',
       data: {
-        test: 'test string'
+        email: '',
+        password: ''
       },
       methods: {
-        cli () {
-          console.log('clicked!')
+        async login () {
+          try {
+            await firebase.auth().createUserWithEmailAndPassword(
+              this.email,
+              this.password
+            )
+          } catch (error) {
+            if (error.code !== 'auth/email-already-in-use') {
+              console.error('signup error', error)
+              return
+            }
+          }
+          try {
+            await firebase.auth().signInWithEmailAndPassword(
+              this.email,
+              this.password
+            )
+          } catch (error) {
+            console.error('signin error', error)
+            return
+          }
+          
         }
       }
     })
 
     // main function zone
     const main = async () => {
-      const user = await waitAuthStateChanged()
-      console.log(user)
     }
 
     document.addEventListener('DOMContentLoaded', main)
