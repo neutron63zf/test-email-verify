@@ -23,9 +23,27 @@
 
 <body>
   <div id="app">
-    <p>MAIL:<input type="text" v-model="email"></p>
-    <p>PASS:<input type="text" v-model="password"></p>
-    <p><button @click="login">login</button></p>
+    <p>MAIL:
+      <input type="text" v-model="email">
+    </p>
+    <p>PASS:
+      <input type="text" v-model="password">
+    </p>
+    <p>
+      <button @click="login">login</button>
+    </p>
+    <p>
+      <button @click="verify">verify email</button>
+    </p>
+    <p>
+      <button @click="applyCode">apply code</button>
+    </p>
+    <p>
+      <button @click="deleteUser">delete user</button>
+    </p>
+    <p>
+      <button @click="signOut">sign out</button>
+    </p>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
   <script src="https://unpkg.com/vue-material@beta"></script>
@@ -41,41 +59,82 @@
   <script>
     Vue.use(VueMaterial.default)
 
+    let user
+
     const vm = new Vue({
       el: '#app',
       data: {
-        email: '',
-        password: ''
+        email: 'neutron63zf+test@gmail.com',
+        password: 'password',
+        user: null
       },
       methods: {
-        async login () {
-          try {
-            await firebase.auth().createUserWithEmailAndPassword(
-              this.email,
-              this.password
-            )
-          } catch (error) {
-            if (error.code !== 'auth/email-already-in-use') {
-              console.error('signup error', error)
+        async login() {
+          if (!user) {
+            try {
+              await firebase.auth().createUserWithEmailAndPassword(
+                this.email,
+                this.password
+              )
+            } catch (error) {
+              if (error.code !== 'auth/email-already-in-use') {
+                console.error('signup error', error)
+                return
+              }
+            }
+            try {
+              await firebase.auth().signInWithEmailAndPassword(
+                this.email,
+                this.password
+              )
+            } catch (error) {
+              console.error('signin error', error)
               return
             }
           }
-          try {
-            await firebase.auth().signInWithEmailAndPassword(
-              this.email,
-              this.password
-            )
-          } catch (error) {
-            console.error('signin error', error)
+          // get current user
+          user = await waitAuthStateChanged()
+          console.log('user', user)
+        },
+        async verify() {
+          console.log('verification start')
+          if (!user) {
             return
           }
-          
+          console.log('verification before')
+          await user.sendEmailVerification({
+            // firebase serveによるもの
+            url: 'http://localhost:5000'
+          })
+          console.log('verification sent')
+        },
+        async applyCode() {
+          // mailにくっついてきたコード
+          const code = location.search.split('&')[1].slice(8)
+          console.log('applyCode', code)
+          // こいつでクエリで飛んで来たコードを適用すると、、
+          await firebase.auth().applyActionCode(code)
+          console.log('successfully applied')
+          console.log('user', user)
+          // 情報は更新しないと反映されない
+          await user.reload()
+          console.log('user reloaded', user)
+        },
+        async deleteUser () {
+          await user.delete()
+          console.log('deleted user')
+        },
+        async signOut () {
+          await firebase.auth().signOut()
+          console.log('signed out')
         }
       }
     })
 
     // main function zone
     const main = async () => {
+      user = await waitAuthStateChanged()
+      console.log('user', user)
     }
 
     document.addEventListener('DOMContentLoaded', main)
